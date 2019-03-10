@@ -4,11 +4,30 @@ if (!require(tidyverse)) install.packages('tidyverse')
 library(BatchGetSymbols)
 library(tidyverse)
 
-get_symbols <- function(path,file){
+get_symbols <- function(path,file,
+                        add.TO=TRUE){
   file_name <- paste0(path,file)
   df <- read.csv(file_name)
-  list_symbols <- (df$tickers)
+  if (add.TO == TRUE) {
+    df.to <- df
+    df.to$tickers <- sapply(df$tickers, function(x) paste0(x,".TO"))
+    df <- rbind(df,df.to)
+  }
+  list_symbols <- df$tickers
   return(list_symbols)
+}
+
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+add_currency <- function(x){
+  curr.val <- "USD"
+  if (substrRight(x, 3) == ".TO") {
+    curr.val <- "CAN"
+  }
+  return(curr.val)
+
 }
 
 
@@ -20,11 +39,9 @@ get_data_from_symbols <- function(initial.date,
                                   threshold.price = 10,
                                   time.window=5){
   
-  # set tickers
-  tickers <- list.symbols
   
   # Collect data from Yahoo
-  df <- BatchGetSymbols(tickers = tickers, 
+  df <- BatchGetSymbols(tickers = list.symbols, 
                            first.date = initial.date,
                            last.date = final.date, 
                            freq.data = frequency.data,
@@ -62,6 +79,10 @@ get_data_from_symbols <- function(initial.date,
   df <- df %>%
     dplyr::mutate(max.date = ref.date + time.window,
                   min.date = ref.date - time.window)
+  
+  # Add column for currency
+  df$currency <- sapply(df$ticker, function(x) add_currency(x))
+  
   
   return(df)
 }
