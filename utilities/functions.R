@@ -15,7 +15,9 @@ get_symbols <- function(path,file){
 get_data_from_symbols <- function(initial.date,
                                   final.date,
                                   frequency.data = 'daily',
-                                  list.symbols){
+                                  list.symbols,
+                                  filter.price.change=TRUE,
+                                  threshold.price = 10){
   
   #first.date <- Sys.Date() - 60
   #last.date <- Sys.Date()
@@ -37,11 +39,25 @@ get_data_from_symbols <- function(initial.date,
   df <- df %>%
     dplyr::select(ticker,ref.date,price.close,volume)
   
-  
+  # Add changes in price with respect present price
   df <- df %>%
     dplyr::group_by(ticker) %>%
     dplyr::mutate(diff.price.close = price.close - lag(price.close)) %>%
-    dplyr::mutate(rel.diff.price.close = 100*diff.price.close/price.close)
+    dplyr::mutate(price.close.prev.date = lag(price.close)) %>%
+    dplyr::mutate(rel.diff.price.close = 100*diff.price.close/price.close.prev.date) %>%
+    dplyr::select(ticker,
+                  ref.date,
+                  price.close,
+                  price.close.prev.date,
+                  rel.diff.price.close)
+  
+  # If requested, get reduced dataframe for price changes of more than 
+  # or equal to a given threshold
+  if (filter.price.change == TRUE) {
+    df <- df %>%
+      dplyr::filter(abs(rel.diff.price.close) >= threshold.price)
+    
+  }
   
   return(df)
 }
