@@ -1,5 +1,5 @@
-###
 if (!require(BatchGetSymbols)) install.packages('BatchGetSymbols')
+if (!require(tidyverse)) install.packages('tidyverse')
 
 library(BatchGetSymbols)
 library(tidyverse)
@@ -17,14 +17,13 @@ get_data_from_symbols <- function(initial.date,
                                   frequency.data = 'daily',
                                   list.symbols,
                                   filter.price.change=TRUE,
-                                  threshold.price = 10){
+                                  threshold.price = 10,
+                                  time.window=5){
   
-  #first.date <- Sys.Date() - 60
-  #last.date <- Sys.Date()
-  freq.data <- 'daily'
   # set tickers
   tickers <- list.symbols
   
+  # Collect data from Yahoo
   df <- BatchGetSymbols(tickers = tickers, 
                            first.date = initial.date,
                            last.date = final.date, 
@@ -59,10 +58,10 @@ get_data_from_symbols <- function(initial.date,
     
   }
   
+  # Add max and min dates to each date contained in the dataset
+  df <- df %>%
+    dplyr::mutate(max.date = ref.date + time.window,
+                  min.date = ref.date - time.window)
+  
   return(df)
 }
-
-
-# http://stat545.com/block023_dplyr-do.html
-
-# https://stackoverflow.com/questions/14846547/calculate-difference-between-values-in-consecutive-rows-by-group
